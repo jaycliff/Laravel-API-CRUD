@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\User;
+use Cookie;
 
 class UserController extends Controller
 {
@@ -14,9 +15,17 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return User::get();
+        $per_page = $request->input('per_page');
+        if (empty($per_page)) {
+            $cookie_value = $request->cookie('per_page');
+            $per_page = !empty($cookie_value) ? $cookie_value : 10;
+        }
+        Cookie::queue('per_page', $per_page);
+        // return $cookie_value;
+        return User::paginate($per_page);
+        // return User::get();
     }
 
     /**
@@ -75,10 +84,6 @@ class UserController extends Controller
     {
         $user = User::find($id);
         return $user;
-    }
-
-    public function isValid($value) {
-
     }
 
     /**
