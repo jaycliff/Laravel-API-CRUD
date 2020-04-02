@@ -18,4 +18,11 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // });
 
-Route::resource('/user', 'UserController');
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Prepend the token with "Bearer "!!!!! F@$#!!!
+    // Headers -> Authorization -> Bearer iKeOUrIyWB6d9uZO3yn3c9P1SrSYUut1qXUndX6C3OR1pUEfgAjKPZcBUa74PMqNMRL9gugU4FXqSL0T
+    Route::resource('/user', 'UserController');
+    Route::post('revoke', 'UserController@revoke')->name('revoke');
+});
+
+Route::post('login', 'UserController@login')->name('login');

@@ -23,9 +23,60 @@ class UserController extends Controller
             $per_page = !empty($cookie_value) ? $cookie_value : 10;
         }
         Cookie::queue('per_page', $per_page);
+        return response()->json(User::paginate($per_page), 201);
+        // return User::paginate($per_page);
         // return $cookie_value;
-        return User::paginate($per_page);
         // return User::get();
+    }
+
+    public function users(Request $request)
+    {
+        $per_page = $request->input('per_page');
+        if (empty($per_page)) {
+            $cookie_value = $request->cookie('per_page');
+            $per_page = !empty($cookie_value) ? $cookie_value : 10;
+        }
+        Cookie::queue('per_page', $per_page);
+        return response()->json(User::paginate($per_page), 201);
+        // return User::paginate($per_page);
+        // return $cookie_value;
+        // return User::get();
+    }
+
+    // Route should be outside the sanctum middleware!!!
+    public function login(Request $request) {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
+        $user = User::where('email', $data['email'])->first();
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            return response()->json([
+                'error' => 'Invalid login',
+                'message' => 'Your login credentials did not match any records.'
+            ], 404);
+        }
+        $token = $user->createToken('app-access')->plainTextToken;
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ], 201);
+    }
+
+    public function revoke(Request $request) {
+        $user = $request->user();
+        $data = $request->post();
+        if (!empty($data['id'])) {
+            $user->tokens()->where('id', $data['id'])->delete();
+            return response()->json([
+                'message' => 'Token at #' . $data['id'] . ' has been revoked.'
+            ], 201);
+        }
+        $user->tokens()->delete();
+        return response()->json([
+            'message' => 'All tokens have been revoked.',
+            'user' => $user
+        ], 201);
     }
 
     /**
@@ -38,6 +89,14 @@ class UserController extends Controller
         //
     }
 
+    private $fields = [
+        'name' => 'required',
+        'email' => 'required|email',
+        'password' => 'required',
+        'role' => 'nullable',
+        'information' => 'nullable'
+    ];
+
     /**
      * Store a newly created resource in storage.
      *
@@ -46,13 +105,7 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required',
-            'email' => 'required|email',
-            'password' => 'required',
-            'role' => 'nullable',
-            'information' => 'nullable'
-        ]);
+        $data = $request->validate($this->fields);
         $user = new User();
         $user->name = $data['name'];
         $user->email = $data['email'];
@@ -60,7 +113,8 @@ class UserController extends Controller
         $user->role = $data['role'] ?? 'member';
         $user->information = $data['information'] ?? '';
         $user->save();
-        return $user;
+        return response()->json($user, 201);
+        // return $user;
     }
 
     /**
@@ -71,7 +125,8 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        return User::find($id);
+        $user = User::find($id);
+        return response()->json($user, 201);
     }
 
     /**
@@ -83,7 +138,19 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::find($id);
-        return $user;
+        return response()->json($user, 201);
+        // return $user;
+    }
+
+    private function assignIfExists($object, $field, $value) {
+        if (!empty($value)) {
+            $trimmed = trim($value);
+            if (!empty($trimmed)) {
+                $object[$field] = $trimmed;
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -96,31 +163,21 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::find($id);
-        // $data = $request->post();
-        $data = $request->validate([
-            'name' => 'nullable',
-            'email' => 'nullable|email',
-            'password' => 'nullable',
-            'role' => 'nullable',
-            'information' => 'nullable'
-        ]);
-        if (!empty($data['name'])) {
-            $user->name = $data['name'];
-        }
-        if (!empty($data['email'])) {
-            $user->email = $data['email'];
-        }
-        if (!empty($data['password'])) {
-            $user->password = Hash::make($data['password']);
-        }
-        if (!empty($data['role'])) {
-            $user->role = $data['role'];
-        }
-        if (!empty($data['information'])) {
-            $user->information = $data['information'];
+        $data = $request->post();
+        $fields = $this->fields;
+        foreach ($fields as $name => $value) {
+            if ($name === 'email' && !empty($data['email'])) {
+                $validated_data = $request->validate([
+                    'email' => 'email'
+                ]);
+                $user->email = $validated_data['email'];
+            } else {
+                $this->assignIfExists($user, $name, $data[$name] ?? NULL);
+            }
         }
         $user->save();
-        return $user;
+        return response()->json($user, 201);
+        // return $user;
     }
 
     /**
@@ -133,6 +190,7 @@ class UserController extends Controller
     {
         $user = User::find($id);
         $user->delete();
-        return $user;
+        return response()->json($user, 201);
+        // return $user;
     }
 }
