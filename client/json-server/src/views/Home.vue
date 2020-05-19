@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <div @transitionend="hidden ? transitionEnd : null" class="curtain" v-if="waiting" v-bind:class="{ 'hidden' : hidden }"></div>
+    <div v-on="{ transitionend: hidden ? transitionEnd : noop }" class="curtain" v-if="waiting" v-bind:class="{ 'hidden' : hidden }"></div>
     <AddPost v-on:add-post="addPost" />
     <ul>
       <li v-for="post in posts" v-bind:key="post.id">
@@ -53,10 +53,10 @@ export default {
       this.waiting = true;
       this.hidden = false;
       post.id = this.nextID;
-      this.posts = [...this.posts, post];
       axios
         .post('http://localhost:3000/posts/', post)
         .then(response => {
+          this.posts = [...this.posts, post];
           this.hidden = true;
           console.log(response.data);
         })
@@ -69,10 +69,10 @@ export default {
     deletePost(id, event) {
       this.waiting = true;
       this.hidden = false;
-      this.posts = this.posts.filter(post => post.id !== id );
       axios
         .delete('http://localhost:3000/posts/' + id)
         .then(response => {
+          this.posts = this.posts.filter(post => post.id !== id );
           this.hidden = true;
           console.log(response.data);
         })
@@ -95,8 +95,9 @@ export default {
     formatTitle(title) {
       return title.charAt(0).toUpperCase() + title.substring(1);
     },
+    noop: () => {},
     transitionEnd() {
-      // alert('END');
+      console.log('END');
       this.waiting = false;
     }
   }
@@ -115,7 +116,7 @@ export default {
     justify-content: center;
     left: 0;
     opacity: 1;
-    position: absolute;
+    position: fixed;
     right: 0;
     top: 0;
     transition: opacity 0.5s;
