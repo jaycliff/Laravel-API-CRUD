@@ -2,7 +2,7 @@
   <div id="app">
     <div id="nav">
       <ul>
-        <li v-for="route in routes" v-bind:key="route.path">
+        <li v-for="(route, index) in routes" v-bind:key="index">
           <router-link :to="route.path">{{ route.name }}</router-link>
         </li>
       </ul>
