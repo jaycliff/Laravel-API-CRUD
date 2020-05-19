@@ -1,5 +1,6 @@
 <template>
   <div class="home">
+    <div @transitionend="hidden ? transitionEnd : null" class="curtain" v-if="waiting" v-bind:class="{ 'hidden' : hidden }"></div>
     <AddPost v-on:add-post="addPost" />
     <ul>
       <li v-for="post in posts" v-bind:key="post.id">
@@ -15,7 +16,7 @@
 <script>
 import axios from 'axios';
 import AddPost from '@/components/AddPost';
-var somevar;
+// var somevar;
 
 export default {
   name: 'Home',
@@ -41,18 +42,44 @@ export default {
   },
   data() {
     return {
+      hidden: true,
       nextID: 0,
-      posts: []
+      posts: [],
+      waiting: false
     };
   },
   methods: {
     addPost(post) {
+      this.waiting = true;
+      this.hidden = false;
       post.id = this.nextID;
       this.posts = [...this.posts, post];
+      axios
+        .post('http://localhost:3000/posts/', post)
+        .then(response => {
+          this.hidden = true;
+          console.log(response.data);
+        })
+        .catch(error => {
+          this.hidden = true;
+          console.log(error);
+        });
       this.nextID += 1;
     },
     deletePost(id, event) {
+      this.waiting = true;
+      this.hidden = false;
       this.posts = this.posts.filter(post => post.id !== id );
+      axios
+        .delete('http://localhost:3000/posts/' + id)
+        .then(response => {
+          this.hidden = true;
+          console.log(response.data);
+        })
+        .catch(error => {
+          this.hidden = true;
+          console.log(error);
+        });
       console.log(event);
     },
     formatID(id) {
@@ -67,12 +94,38 @@ export default {
     },
     formatTitle(title) {
       return title.charAt(0).toUpperCase() + title.substring(1);
+    },
+    transitionEnd() {
+      // alert('END');
+      this.waiting = false;
     }
   }
 }
 </script>
 
 <style scoped>
+  .curtain {
+    align-items: center;
+    background-color: gray;
+    bottom: 0;
+    color: white;
+    display: flex;
+    font-size: 24px;
+    font-style: italic;
+    justify-content: center;
+    left: 0;
+    opacity: 1;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: opacity 0.5s;
+  }
+  .curtain:before {
+    content: "Please wait";
+  }
+  .curtain.hidden {
+    opacity: 0;
+  }
   ul {
     list-style: none;
     margin: 0;
